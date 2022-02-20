@@ -1,9 +1,11 @@
-import { auth, provider } from "../lib/firebase";
+import { auth, db, provider } from "../lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { UserContext } from "../lib/context";
+import { doc, writeBatch } from "firebase/firestore";
 
+//[localhost:3000/enterのパスのときに反映される]
 function EnterPage() {
   // const user = null;
   // const username = null;
@@ -11,9 +13,9 @@ function EnterPage() {
 
   return (
     <main>
-      {user ? (
-        !username ? (
-          <UsernameForm /> //ユーザ名だけ決まってないから打ち込んで
+      {user ? ( //userはuseAuthStateでゲットできてる。
+        !username ? ( //usernameがまだnullです。でも一回決めたらずっとあるからここにいかない病気
+          <UsernameForm /> //ユーザ名だけ決まってないから打ち込んで(カスタムユーザー名)
         ) : (
           <SignOutButton /> //ユーザー情報もあるし、ユーザ名もちゃんと決まってるよ
         )
@@ -42,8 +44,59 @@ function SignOutButton() {
   return <button onClick={() => auth.signOut()}>サインアウト</button>;
 }
 
+//カスタムユーザーを決めるためのフォーム
 function UsernameForm() {
-  return null;
+  const [formValue, setFormValue] = useState("");
+
+  const { user, username } = useContext(UserContext);
+
+  //カスタムユーザー名で新規投稿
+  const onSubmit = async (e) => {
+    e.preventDefault();
+
+    const userDoc = doc(db, `users/${user.uid}`);
+    const usernameDoc = doc(db, `usernames/${formValue}`);
+
+    const batch = writeBatch(db);
+    batch.set(userDoc, {
+      username: formValue,
+      photoURL: user.photoURL,
+      displayName: user.displayName,
+    });
+    batch.set(usernameDoc, { uid: user.uid });
+
+    await batch.commit();
+  };
+
+  const onChange = (e) => {
+    const inputValue = e.target.value;
+
+    setFormValue(inputValue);
+
+    /* あとで重複名前のチェック */
+    // useEffect(() => {
+    //   checkUsername(formValue);
+    // }, formValue);
+  };
+
+  return (
+    !username && (
+      <section>
+        <h3>ユーザ名を決めてください</h3>
+        <form onSubmit={onSubmit}>
+          <input
+            name="username"
+            placeholder="あなたの名前"
+            value={formValue}
+            onChange={onChange}
+          />
+          <button type="submit" className="btn-green">
+            決定
+          </button>
+        </form>
+      </section>
+    )
+  );
 }
 
 export default EnterPage;
