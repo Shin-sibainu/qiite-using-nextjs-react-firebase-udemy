@@ -47,6 +47,7 @@ function SignOutButton() {
 //カスタムユーザーを決めるためのフォーム
 function UsernameForm() {
   const [formValue, setFormValue] = useState("");
+  //ここからユーザー名が被らないように設定したい
 
   const { user, username } = useContext(UserContext);
 
@@ -54,9 +55,11 @@ function UsernameForm() {
   const onSubmit = async (e) => {
     e.preventDefault();
 
+    //指定した場所(コレクション階層)にuidとカスタムユーザー名を挿入したい
     const userDoc = doc(db, `users/${user.uid}`);
     const usernameDoc = doc(db, `usernames/${formValue}`);
 
+    //まとめてデータに挿入する。
     const batch = writeBatch(db);
     batch.set(userDoc, {
       username: formValue,
